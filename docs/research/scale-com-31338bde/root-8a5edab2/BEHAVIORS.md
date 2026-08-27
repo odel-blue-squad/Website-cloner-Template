@@ -14,8 +14,12 @@ lenis.on("scroll", ScrollTrigger.update)
 gsap.ticker.add(t => lenis.raf(t * 1000)); gsap.ticker.lagSmoothing(0)
 ```
 
-## 1. Hero — scroll-scrubbed WebGL · verified
-450dvh (232dvh under 768px). Timeline is verbatim from the bundle:
+## 1. Hero — the "pull-apart" · verified against screen recording
+450dvh (232dvh under 768px). A full-bleed rounded video panel shrinks, rotates
+and splits into a three-plane stack: white contour lines in front (edge-detected
+from the mask strip baked into the top 20% of Packed.mp4), the clip reel in the
+middle, a translucent binary-annotated plane behind. Timeline verbatim from the
+bundle:
 
 | target | from | to | duration | ease | at |
 |---|---|---|---|---|---|
@@ -24,13 +28,20 @@ gsap.ticker.add(t => lenis.raf(t * 1000)); gsap.ticker.lagSmoothing(0)
 | `uProgress` | 0 | 1 | 0.8 | linear | 0.2 |
 | `group.position.y` | 0 | 0.165 | 0.3 | cubic.inOut | 0.7 |
 
-Progress = `clamp(scrollY / (4.5 × innerHeight))`. Mouse parallax strength 0.25.
-`uProgress` additionally gates, inside the shaders:
-- curve draw-on: `if (vCurveu > progress) discard`, first wave is `id < 8.5`
-- card outlines: `smoothstep(0.55, 1.0, progress)`
-- travelling triangles: `smoothstep(0.1, 0.75, uProgress)`
-- connector lines fade out: `smoothstep(0.4, 0.2, uProgress)`
-- logo reveal: `cubicOut(clamp(uProgress * 2.5, 0, 1))`, masked by `smoothstep(0.05, 0.1, uProgress)`
+Reconstructed additions (from the recording, not the bundle): x drift
+0 → +0.05 → −0.065 to frame the copy stops; layer separation and per-layer
+alpha as `smoothstep(0.08, 0.4, progress)`.
+
+Three copy stops, text verbatim from SSR HTML, at fixed progress windows:
+- 0.12–0.34 centre-bottom: "Reliable AI has no shortcuts."
+- 0.38–0.62 left: ◤ APPLICATIONS · "AI systems that actually work." · For Enterprise → (+ logo strip)
+- 0.66–0.97 right: ◤ DATA · "The data powering the world's best AI." · Explore Data Engine →
+
+`Packed.mp4` is both a spatial AND temporal atlas: content in the bottom-left
+80%×80%, per-clip contour masks in the top strip, and the clip reel (pilot →
+driving → oil rig → crystals → surgery → ultrasound → robotics → leaderboard →
+tower → studio) crossfades inside the file itself. Logo intro is time-driven at
+load, not scroll-driven. Mouse parallax strength 0.25.
 
 ## 2. Scrolling quote — pinned word reveal · verified
 `h-[200dvh]`, pinned with `pinSpacing: true`, `start "top top"` / `end "bottom bottom"`.
@@ -61,7 +72,10 @@ Blog card hover: image `scale 1 → 1.04` over 500ms ease-out inside `overflow-h
 `{ start: "top top", end: "bottom top" }`,
 `fromTo(inner, {yPercent:0}, {yPercent:-20, duration:0.75, ease:"power2.out"})`.
 
-## 7. Header — theme-driven colour · measured
+## 7. Header — theme colour + hide-on-scroll · measured
+Hides on scroll-down (translateY −100%), reveals on scroll-up, always shown
+near the top. Absent in every scrolled frame of the reference capture.
+
 `fixed`, `z-50`, `top: var(--announcement-offset)`, `transition-colors duration-300`;
 inner wrapper `duration-200 delay-20`. Sections publish their theme on enter:
 - dark → `--nav-background: transparent`, `--nav-text: #fff`
