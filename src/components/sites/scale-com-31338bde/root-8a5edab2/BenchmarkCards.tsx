@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, type SVGProps } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import {
@@ -9,27 +9,43 @@ import {
 } from "@/components/sites/scale-com-31338bde/root-8a5edab2/content";
 import { pageTheme } from "@/components/sites/scale-com-31338bde/shared/pageTheme";
 import { useTimelineScroll } from "@/components/sites/scale-com-31338bde/shared/useTimelineScroll";
-import { ArrowRightIcon } from "@/components/sites/scale-com-31338bde/shared/icons";
 
 /**
- * "We set the benchmark for what's possible with AI" — three cards that reveal
- * on a scrubbed stagger as the section enters.
- *
- * The root class list below is lifted verbatim from scale.com. Its arbitrary
- * variants reach into `.Card`, `.Card > div`, `.Card .header5-regular` and
- * `.Card .RichText p.body1` to apply the sub-xl overrides, so those class names
- * are load-bearing structure — renaming them silently breaks the mobile sizes.
+ * "We set the benchmark…" — a white rounded panel that rises over the grey
+ * marquee section. Three compact cards: two on light grey, the third on slate
+ * with a black CTA, each with a small white icon tile. A purple accent bar
+ * slides up along the card's bottom edge on hover (sampled #665975).
  */
-const CARD_GRID_ROOT =
-  "CardGrid [&_.Card]:max-xl:!rounded-[8px] [&_.Card>div]:max-xl:!p-[24px] [&_.Card_.header5-regular]:max-xl:text-[18px] [&_.Card_.header5-regular]:max-xl:leading-[1.35] [&_.Card_.RichText_p.body1]:max-xl:text-[14px]";
 
-/** scale.com's 12-column grid, plus explicit fallbacks for the custom classes. */
-const GRID = cn(
-  "grid-layout-mobile md:grid-layout-desktop",
-  "md:grid-cols-[repeat(12,minmax(0,150px))] md:justify-center",
-);
+const SLATE = "#7893a6";
+const ACCENT = "#665975";
 
 const isExternal = (href: string) => /^https?:\/\//.test(href);
+
+/* minimal chart glyphs matching the tiles in the capture */
+function TrendIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" {...props}>
+      <path d="M1.5 11.5 6 7l3 3 5.5-5.5" />
+      <path d="M10.5 4.5h4v4" />
+    </svg>
+  );
+}
+function BarsIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" {...props}>
+      <path d="M3 13V9M8 13V4M13 13V6.5" />
+    </svg>
+  );
+}
+function LayersIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" {...props}>
+      <path d="m8 2 6 3.2L8 8.4 2 5.2 8 2ZM2 8.6l6 3.2 6-3.2M2 11.8 8 15l6-3.2" />
+    </svg>
+  );
+}
+const ICONS = [TrendIcon, BarsIcon, LayersIcon];
 
 export function BenchmarkCards() {
   const sectionRef = useRef<HTMLElement>(null);
@@ -39,87 +55,91 @@ export function BenchmarkCards() {
     start: "top bottom",
     end: "bottom 75%",
     scrub: true,
-    setupTimeline: (tl) => {
-      const cards = cardRefs.current.filter(
-        (el): el is HTMLAnchorElement => el !== null,
-      );
-      if (cards.length === 0) return;
-      tl.fromTo(
-        cards,
-        { opacity: 0, y: 40 },
-        { opacity: 1, y: 0, stagger: 0.12, ease: "none" },
-        0,
-      );
-    },
     onEnter: () => pageTheme.set("light"),
-    onUpdate: () => pageTheme.set("light"),
+    setupTimeline: (tl) => {
+      const cards = cardRefs.current.filter(Boolean);
+      if (cards.length) {
+        tl.fromTo(cards, { opacity: 0, y: 40 }, { opacity: 1, y: 0, stagger: 0.12, ease: "none" }, 0);
+      }
+    },
   });
 
   return (
     <section
       ref={sectionRef}
-      className={`${CARD_GRID_ROOT} relative bg-scale-gray-90 md:bg-transparent`}
+      className={cn(
+        "CardGrid [&_.Card]:max-xl:!rounded-[8px] [&_.Card>div]:max-xl:!p-[24px]",
+        "[&_.Card_.header5-regular]:max-xl:text-[18px] [&_.Card_.header5-regular]:max-xl:leading-[1.35]",
+        "[&_.Card_.RichText_p.body1]:max-xl:text-[14px]",
+        "relative z-2 -mt-6 rounded-t-[16px] bg-white py-12 md:py-16",
+      )}
     >
-      <div className={cn(GRID, "pt-16 md:pt-24")}>
-        <h2 className="header2 col-span-8 md:col-span-8 text-scale-gray-10">
+      <div className="mx-auto max-w-[1200px] grid-padding">
+        <h2 className="text-[18px] font-medium text-scale-gray-10 md:text-[20px]">
           {BENCHMARK_HEADING}
         </h2>
-      </div>
 
-      <div className={cn(GRID, "gap-y-2 pt-10 pb-16 md:pt-16 md:pb-24")}>
-        {BENCHMARK_CARDS.map((card, i) => {
-          const external = isExternal(card.href);
+        <div className="mt-8 grid grid-cols-1 gap-1.5 md:grid-cols-3">
+          {BENCHMARK_CARDS.map((card, index) => {
+            const Icon = ICONS[index % ICONS.length];
+            const slate = index === 2;
+            const external = isExternal(card.href);
+            return (
+              <Link
+                key={card.href}
+                ref={(el) => { cardRefs.current[index] = el; }}
+                href={card.href}
+                target={external ? "_blank" : undefined}
+                rel={external ? "noopener noreferrer" : undefined}
+                className={cn(
+                  "Card group relative flex min-h-[230px] flex-col overflow-hidden rounded-[12px]",
+                  slate ? "text-white" : "bg-scale-gray-95 text-scale-gray-10",
+                )}
+                style={slate ? { backgroundColor: SLATE } : undefined}
+              >
+                <div className="flex h-full flex-col p-5">
+                  <span
+                    className={cn(
+                      "flex size-9 items-center justify-center rounded-md bg-white",
+                      slate ? "text-scale-gray-20" : "text-scale-gray-10",
+                    )}
+                  >
+                    <Icon className="size-4" />
+                  </span>
 
-          return (
-            <Link
-              key={card.cta + card.href}
-              href={card.href}
-              target={external ? "_blank" : undefined}
-              rel={external ? "noopener noreferrer" : undefined}
-              ref={(el) => {
-                cardRefs.current[i] = el;
-              }}
-              className={cn(
-                "Card group col-span-8 md:col-span-4",
-                "rounded-[16px] border border-scale-gray-90 bg-white",
-                "transition-colors duration-300 [transition-timing-function:ease]",
-                "hover:border-scale-gray-80",
-              )}
-            >
-              {/* Direct child div — targeted by [&_.Card>div]:max-xl:!p-[24px]. */}
-              <div className="flex h-full flex-col p-8">
-                <h3 className="header5-regular text-scale-gray-10">
-                  {card.lines.map((line) => (
-                    <span key={line} className="block">
-                      {line}
-                    </span>
-                  ))}
-                </h3>
+                  {/* verbatim line breaks, joined — the capture flows them */}
+                  <h3 className="header5-regular mt-6 !text-[15px] !leading-[1.4] font-medium">
+                    {card.lines.join(" ")}
+                  </h3>
 
-                <div className="RichText mt-4">
-                  <p className="body1 text-scale-gray-30">
-                    {card.body.map((line) => (
-                      <span key={line} className="block">
-                        {line}
-                      </span>
-                    ))}
-                  </p>
+                  <div className="RichText mt-3">
+                    <p className={cn("body1 !text-[11.5px] !leading-[1.5]", slate ? "text-white/75" : "text-scale-gray-30")}>
+                      {card.body.join(" ")}
+                    </p>
+                  </div>
+
+                  <span
+                    className={cn(
+                      "mt-auto inline-flex w-max items-center rounded-md px-2.5 py-1 text-[11px] transition-colors duration-200",
+                      slate
+                        ? "bg-black text-white group-hover:bg-scale-gray-10"
+                        : "border border-scale-gray-80 text-scale-gray-20 group-hover:border-scale-gray-30",
+                    )}
+                  >
+                    {card.cta}
+                  </span>
                 </div>
 
-                <span className="body3 mt-auto inline-flex items-center gap-2 pt-8 text-scale-gray-10">
-                  {card.cta}
-                  <ArrowRightIcon
-                    className={cn(
-                      "size-4 shrink-0",
-                      "transition-transform duration-300 [transition-timing-function:ease]",
-                      "group-hover:translate-x-1",
-                    )}
-                  />
-                </span>
-              </div>
-            </Link>
-          );
-        })}
+                {/* hover accent bar along the bottom edge */}
+                <span
+                  aria-hidden="true"
+                  className="absolute inset-x-0 bottom-0 h-[3px] translate-y-full transition-transform duration-300 ease-out group-hover:translate-y-0"
+                  style={{ backgroundColor: ACCENT }}
+                />
+              </Link>
+            );
+          })}
+        </div>
       </div>
     </section>
   );

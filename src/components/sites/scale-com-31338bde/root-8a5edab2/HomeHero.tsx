@@ -5,28 +5,32 @@ import Image from "next/image";
 import * as THREE from "three";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { buildHeroScene, type HeroScene } from "./hero/scene";
+import { buildHeroScene } from "./hero/scene";
 import { pageTheme } from "@/components/sites/scale-com-31338bde/shared/pageTheme";
-import { ArrowDownIcon } from "@/components/sites/scale-com-31338bde/shared/icons";
-import { HERO, TEXTURE, VIDEO } from "./content";
+import { ArrowDownIcon, ChevronRightIcon, TriangleGlyph } from "@/components/sites/scale-com-31338bde/shared/icons";
+import { HERO, HERO_STOPS, TEXTURE, VIDEO } from "./content";
 
 /**
- * The hero is a scroll-scrubbed three.js scene pinned across 450dvh (232dvh on
- * mobile). Scene geometry, shaders and the GSAP timeline below are ports of
- * scale.com's own — the timeline keyframes are verbatim from their bundle:
+ * The "pull-apart" hero: a full-bleed video panel that shrinks, rotates and
+ * splits into a three-plane stack across 450dvh of scroll. The group timeline
+ * keyframes are verbatim from scale.com's bundle:
  *
  *   scale    1.75  → 0.275   duration .9  ease cubic.inOut  at 0
  *   rotation x/y 0 → .5/.6   duration .7  ease cubic.inOut  at .2
  *   uProgress 0   → 1        duration .8  ease linear       at .2
  *   position y 0  → .165     duration .3  ease cubic.inOut  at .7
  *
- * GSAP's "cubic" is an alias of "power2", so power2.inOut is the same curve.
+ * Copy stops (verbatim SSR text) fade in at fixed progress windows while the
+ * scene is pinned. GSAP's "cubic" is an alias of "power2".
  */
 export function HomeHero() {
   const rootRef = useRef<HTMLDivElement>(null);
   const canvasHostRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const posterRef = useRef<HTMLDivElement>(null);
+  const headlineRef = useRef<HTMLDivElement>(null);
+  const hintRef = useRef<HTMLDivElement>(null);
+  const stopRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   useLayoutEffect(() => {
     const host = canvasHostRef.current;
@@ -52,21 +56,18 @@ export function HomeHero() {
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(50, 1, 0.01, 100);
-    // Distance chosen so the panel is exactly full-bleed at the timeline's
-    // opening scale of 1.75: panelHeight = 0.4 * 1.75 = 0.7 world units, and
-    // 0.7 / (2 * tan(50deg / 2)) = 0.75.
+    // Full-bleed at the timeline's opening scale: 0.4 × 1.75 = 0.7 world units
+    // of panel height, and 0.7 / (2 tan 25°) = 0.75.
     camera.position.z = 0.75;
 
-    let hero: HeroScene;
+    let hero: ReturnType<typeof buildHeroScene>;
     try {
-      hero = buildHeroScene(video, `${TEXTURE}/logo.png`);
+      hero = buildHeroScene(video, `${TEXTURE}/logo.png`, `${TEXTURE}/numbers.png`);
     } catch {
       renderer.dispose();
       return;
     }
     scene.add(hero.group);
-    // Fade the poster out directly rather than through React state: this is an
-    // external-system update, and setState here would cascade a re-render.
     if (posterRef.current) posterRef.current.style.opacity = "0";
 
     /* ---- exact timeline from scale.com's bundle ---- */
@@ -75,6 +76,11 @@ export function HomeHero() {
     timeline.fromTo(hero.group.rotation, { y: 0, x: 0 }, { y: 0.6, x: 0.5, duration: 0.7, ease: "power2.inOut" }, 0.2);
     timeline.to(hero.progress, { value: 1, duration: 0.8, ease: "linear" }, 0.2);
     timeline.fromTo(hero.group.position, { y: 0 }, { y: 0.165, duration: 0.3, ease: "power2.inOut" }, 0.7);
+    // Reconstructed framing (not in the recovered timeline): the stack sits
+    // right of centre for the left-hand copy stop, then crosses to the left
+    // for the right-hand one — matching the reference capture.
+    timeline.fromTo(hero.group.position, { x: 0 }, { x: 0.05, duration: 0.2, ease: "power2.inOut" }, 0.3);
+    timeline.to(hero.group.position, { x: -0.065, duration: 0.15, ease: "power2.inOut" }, 0.6);
     timeline.progress(0.01);
 
     const resize = () => {
@@ -82,17 +88,13 @@ export function HomeHero() {
       const h = host.clientHeight || window.innerHeight;
       const dpr = Math.min(window.devicePixelRatio, 2);
       renderer.setPixelRatio(dpr);
-      renderer.setSize(w, h); // updateStyle must stay on, or the canvas paints at DPR scale
+      renderer.setSize(w, h); // updateStyle stays on, or the canvas paints at DPR scale
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
       hero.uniforms.uResolution.value.set(w, h);
       hero.uniforms.uDPR.value = dpr;
     };
     resize();
-    // A window "resize" listener alone is not enough: the host can change size
-    // without the window doing so (pane/panel layouts, dvh settling after the
-    // URL bar collapses). Observe the element itself and keep the listener as a
-    // backstop for devicePixelRatio changes on monitor switches.
     const observer = new ResizeObserver(resize);
     observer.observe(host);
     window.addEventListener("resize", resize);
@@ -100,19 +102,56 @@ export function HomeHero() {
     /* ---- mouse parallax (scale.com uses strength 0.25) ---- */
     const pointer = { x: 0, y: 0 };
     const damped = { x: 0, y: 0 };
-    const PARALLAX_STRENGTH = 0.25;
     const onPointerMove = (event: PointerEvent) => {
       pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
       pointer.y = (event.clientY / window.innerHeight) * 2 - 1;
     };
     window.addEventListener("pointermove", onPointerMove);
 
-    /* ---- scroll drives timeline progress across the section ---- */
+    /* ---- DOM overlays driven from the same progress value ---- */
+    const window01 = (p: number, a: number, b: number, feather: number) => {
+      const rise = Math.min(1, Math.max(0, (p - a) / feather));
+      const fall = Math.min(1, Math.max(0, (b - p) / feather));
+      return Math.min(rise, fall);
+    };
+
+    const applyOverlays = (p: number) => {
+      const headlineAlpha = 1 - Math.min(1, Math.max(0, (p - 0.05) / 0.07));
+      if (headlineRef.current) {
+        gsap.set(headlineRef.current, { opacity: headlineAlpha, y: headlineAlpha < 1 ? -14 * (1 - headlineAlpha) : 0 });
+      }
+      if (hintRef.current) gsap.set(hintRef.current, { opacity: headlineAlpha });
+      HERO_STOPS.forEach((stop, index) => {
+        const el = stopRefs.current[index];
+        if (!el) return;
+        const a = window01(p, stop.range[0], stop.range[1], 0.05);
+        gsap.set(el, { opacity: a, y: 16 * (1 - a), pointerEvents: a > 0.5 ? "auto" : "none" });
+      });
+    };
+    applyOverlays(0);
+
+    // QA affordance (development only): ?heroProgress=0.5 freezes the scene at
+    // a fixed progress so scrolled states can be captured without scrolling.
+    let frozen: number | null = null;
+    if (process.env.NODE_ENV === "development") {
+      const q = Number(new URLSearchParams(window.location.search).get("heroProgress"));
+      if (Number.isFinite(q) && q > 0) {
+        frozen = Math.min(1, q);
+        timeline.progress(frozen);
+        applyOverlays(frozen);
+      }
+    }
+
     const trigger = ScrollTrigger.create({
       trigger: root,
       start: "top top",
       end: "bottom bottom",
-      onUpdate: (self) => timeline.progress(Math.min(1, Math.max(0, self.progress))),
+      onUpdate: (self) => {
+        if (frozen !== null) return;
+        const p = Math.min(1, Math.max(0, self.progress));
+        timeline.progress(Math.max(0.01, p));
+        applyOverlays(p);
+      },
       onEnter: () => pageTheme.set("dark"),
       onEnterBack: () => pageTheme.set("dark"),
     });
@@ -123,12 +162,13 @@ export function HomeHero() {
       hero.uniforms.uDelta.value = delta;
       if (!reduceMotion) hero.uniforms.uTime.value += delta;
 
-      damped.x += (pointer.x * PARALLAX_STRENGTH - damped.x) * 0.05;
-      damped.y += (pointer.y * PARALLAX_STRENGTH - damped.y) * 0.05;
+      damped.x += (pointer.x * 0.25 - damped.x) * 0.05;
+      damped.y += (pointer.y * 0.25 - damped.y) * 0.05;
       camera.position.x = damped.x * 0.15;
       camera.position.y = -damped.y * 0.15;
       camera.lookAt(0, 0, 0);
 
+      hero.update();
       renderer.render(scene, camera);
     };
     gsap.ticker.add(tick);
@@ -181,11 +221,7 @@ export function HomeHero() {
         </div>
 
         {/* Poster shown until the GL scene reports ready (and if WebGL is absent). */}
-        <div
-          ref={posterRef}
-          className="absolute inset-0 z-0 opacity-100 transition-opacity duration-700"
-          aria-hidden="true"
-        >
+        <div ref={posterRef} className="absolute inset-0 z-0 opacity-100 transition-opacity duration-700" aria-hidden="true">
           <Image
             src="/sites/scale-com-31338bde/root-8a5edab2/images/hero-fallback.jpg"
             alt=""
@@ -196,20 +232,66 @@ export function HomeHero() {
           />
         </div>
 
-        <section className="absolute top-0 left-0 z-10 flex min-h-dvh w-full flex-col items-center justify-center px-6 text-center">
-          <h1 className="header2 max-w-[18ch] text-white">{HERO.heading}</h1>
-        </section>
-
-        <div className="absolute bottom-10 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-3">
-          <span className="body3 tracking-wider text-white/70 uppercase">{HERO.scrollHint}</span>
-          <ArrowDownIcon className="size-4 shrink-0 animate-bounce text-white" />
+        {/* Opening headline — two lines, verbatim break. */}
+        <div ref={headlineRef} className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center px-6 text-center">
+          <h1 className="header2 text-white">
+            {HERO.headingLines.map((line) => (
+              <span key={line} className="block">{line}</span>
+            ))}
+          </h1>
         </div>
 
-        <div className="absolute bottom-28 left-1/2 z-10 flex -translate-x-1/2 items-center gap-8 opacity-70 md:bottom-24 md:gap-12">
-          {HERO.logos.map((logo) => (
-            <Image key={logo} src={logo} alt="" width={68} height={30} className="h-[30px] w-auto object-contain brightness-0 invert" />
-          ))}
+        {/* Scroll hint — bottom right, like the live site. */}
+        <div ref={hintRef} className="pointer-events-none absolute right-6 bottom-6 z-10 flex items-center gap-3 md:right-10 md:bottom-8">
+          <span className="font-mono text-[10px] tracking-[0.14em] text-white/70 uppercase">{HERO.scrollHint}</span>
+          <span className="flex size-6 items-center justify-center rounded-[4px] border border-white/30">
+            <ArrowDownIcon className="size-3 text-white" />
+          </span>
         </div>
+
+        {/* Pull-apart copy stops. */}
+        {HERO_STOPS.map((stop, index) => (
+          <div
+            key={stop.heading}
+            ref={(el) => { stopRefs.current[index] = el; }}
+            className={
+              stop.align === "center"
+                ? "absolute inset-x-0 bottom-[10%] z-20 flex flex-col items-center gap-4 px-6 text-center opacity-0"
+                : stop.align === "left"
+                  ? "absolute top-1/2 left-[8%] z-20 flex max-w-[300px] -translate-y-1/2 flex-col items-start gap-4 opacity-0 xl:left-[12%]"
+                  : "absolute top-1/2 right-[8%] z-20 flex max-w-[300px] -translate-y-1/2 flex-col items-start gap-4 opacity-0 xl:right-[10%]"
+            }
+          >
+            {stop.eyebrow ? (
+              <p className="flex items-center gap-2 font-mono text-[10px] tracking-[0.14em] text-scale-gray-60 uppercase md:text-[11px]">
+                <TriangleGlyph className="size-[7px] text-scale-gray-60" />
+                {stop.eyebrow}
+              </p>
+            ) : null}
+            <h3 className={`text-[22px] leading-[1.2] text-white md:text-[26px] ${stop.align === "center" ? "max-w-[400px]" : ""}`}>
+              {stop.heading}
+            </h3>
+            <p className={`text-[12px] leading-[1.5] text-white/60 ${stop.align === "center" ? "max-w-[360px]" : "max-w-[280px]"}`}>
+              {stop.body}
+            </p>
+            {stop.cta ? (
+              <a
+                href={stop.href ?? "#"}
+                className="mt-1 inline-flex h-8 items-center gap-1.5 rounded-md bg-scale-evergreen px-3 text-[12px] font-medium text-white transition-opacity duration-200 hover:opacity-85"
+              >
+                {stop.cta}
+                <ChevronRightIcon className="size-3.5" />
+              </a>
+            ) : null}
+            {stop.eyebrow === "Applications" ? (
+              <div className="mt-4 flex items-center gap-6 opacity-60">
+                {HERO.logos.map((logo) => (
+                  <Image key={logo} src={logo} alt="" width={52} height={24} className="h-6 w-auto object-contain brightness-0 invert" />
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ))}
       </div>
     </div>
   );

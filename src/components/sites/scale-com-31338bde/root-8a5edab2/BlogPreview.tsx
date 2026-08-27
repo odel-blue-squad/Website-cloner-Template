@@ -1,169 +1,118 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { gsap } from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { cn } from "@/lib/utils";
-import { useTimelineScroll } from "@/components/sites/scale-com-31338bde/shared/useTimelineScroll";
-import { pageTheme } from "@/components/sites/scale-com-31338bde/shared/pageTheme";
 import {
-  BLOG_FEATURED,
   BLOG_HEADING,
-  BLOG_POSTS,
+  BLOG_MOSAIC,
 } from "@/components/sites/scale-com-31338bde/root-8a5edab2/content";
-import type { BlogPost } from "@/types/scale";
+import { pageTheme } from "@/components/sites/scale-com-31338bde/shared/pageTheme";
+import { useTimelineScroll } from "@/components/sites/scale-com-31338bde/shared/useTimelineScroll";
 
-const FEATURED_SIZES = "(min-width: 768px) 50vw, 100vw";
-const POST_SIZES = "(min-width: 768px) 33vw, 100vw";
+/**
+ * Blog mosaic, matching the reference capture: a centred two-line heading over
+ * a 12-column patchwork of three card treatments —
+ *   panel:   flat grey tile, title bottom-left (no media)
+ *   overlay: image with the title set inside its bottom edge
+ *   caption: image with a category chip on it and the title beneath
+ */
 
-type CardRefSetter = (el: HTMLAnchorElement | null) => void;
+type MosaicCard = (typeof BLOG_MOSAIC)[number];
 
-interface BlogCardProps {
-  post: BlogPost;
-  setRef: CardRefSetter;
-}
-
-function FeaturedCard({ post, setRef }: BlogCardProps) {
+function Chip({ label, color }: { label: string; color: string }) {
   return (
-    <Link
-      ref={setRef}
-      href={post.href}
-      className="group col-span-8 block md:col-span-6"
+    <span
+      className="absolute top-2.5 left-2.5 z-10 rounded-[3px] px-1.5 py-0.5 font-mono text-[9px] tracking-[0.08em] text-white uppercase"
+      style={{ backgroundColor: color }}
     >
-      <div className="relative aspect-[16/9] w-full overflow-hidden rounded-[16px] bg-scale-gray-95">
-        {post.image ? (
-          <Image
-            src={post.image}
-            alt={post.alt ?? ""}
-            fill
-            sizes={FEATURED_SIZES}
-            className="object-cover transition-transform duration-500 ease-out will-change-transform group-hover:scale-[1.04]"
-          />
-        ) : null}
-      </div>
-      <h3 className="header5-regular mt-4 text-scale-gray-10 transition-colors duration-300 ease-out group-hover:text-scale-gray-30 md:mt-6">
-        {post.title}
-      </h3>
-    </Link>
+      {label}
+    </span>
   );
 }
 
-function PostCard({ post, setRef }: BlogCardProps) {
+function Card({ card, setRef }: { card: MosaicCard; setRef: (el: HTMLAnchorElement | null) => void }) {
+  const image = "image" in card ? card.image : undefined;
+  const alt = "alt" in card && card.alt ? card.alt : "";
+
   return (
     <Link
       ref={setRef}
-      href={post.href}
-      className="group col-span-8 block md:col-span-4"
+      href={card.href}
+      className={cn("group col-span-8 block", card.cols)}
     >
-      <div className="relative aspect-[16/9] w-full overflow-hidden rounded-[16px] bg-scale-gray-95">
-        {post.image ? (
-          <Image
-            src={post.image}
-            alt={post.alt ?? ""}
-            fill
-            sizes={POST_SIZES}
-            className="object-cover transition-transform duration-500 ease-out will-change-transform group-hover:scale-[1.04]"
-          />
-        ) : null}
-      </div>
-      {post.category ? (
-        <p className="body3 mt-4 uppercase tracking-wider text-scale-gray-60">
-          {post.category}
-        </p>
-      ) : null}
-      <h3
+      <div
         className={cn(
-          "header6 text-scale-gray-10 transition-colors duration-300 ease-out group-hover:text-scale-gray-30",
-          post.category ? "mt-2" : "mt-4",
+          "relative w-full overflow-hidden rounded-[10px] bg-scale-gray-95",
+          card.height,
         )}
       >
-        {post.title}
-      </h3>
+        {card.chip && card.chipColor ? <Chip label={card.chip} color={card.chipColor} /> : null}
+
+        {image ? (
+          <Image
+            src={image}
+            alt={alt}
+            fill
+            sizes="(min-width: 768px) 50vw, 100vw"
+            className="object-cover transition-transform duration-500 ease-out will-change-transform group-hover:scale-[1.03]"
+          />
+        ) : null}
+
+        {card.variant === "overlay" ? (
+          <p
+            className="absolute right-4 bottom-3 left-4 z-10 text-[15px] leading-snug"
+            style={{ color: "titleColor" in card && card.titleColor ? card.titleColor : "#ffffff" }}
+          >
+            {card.title}
+          </p>
+        ) : null}
+
+        {card.variant === "panel" ? (
+          <p className="absolute bottom-4 left-4 text-[15px] leading-snug text-scale-gray-10">
+            {card.title}
+          </p>
+        ) : null}
+      </div>
+
+      {card.variant === "caption" ? (
+        <p className="mt-2 text-[11px] leading-[1.45] text-scale-gray-30 transition-colors duration-300 group-hover:text-black">
+          {card.title}
+        </p>
+      ) : null}
     </Link>
   );
 }
 
 export function BlogPreview() {
-  const rootRef = useRef<HTMLElement | null>(null);
+  const sectionRef = useRef<HTMLElement>(null);
   const cardRefs = useRef<(HTMLAnchorElement | null)[]>([]);
 
-  const registerCard = useCallback(
-    (index: number): CardRefSetter =>
-      (el) => {
-        cardRefs.current[index] = el;
-      },
-    [],
-  );
-
-  const setupTimeline = useCallback((tl: gsap.core.Timeline) => {
-    const cardEls = cardRefs.current.filter(
-      (el): el is HTMLAnchorElement => el !== null,
-    );
-    if (cardEls.length === 0) return;
-    tl.fromTo(
-      cardEls,
-      { opacity: 0, y: 40 },
-      { opacity: 1, y: 0, stagger: 0.08, ease: "none" },
-      0,
-    );
-  }, []);
-
-  useTimelineScroll(rootRef, {
+  useTimelineScroll(sectionRef, {
     start: "top bottom",
     end: "bottom 75%",
     scrub: true,
-    setupTimeline,
+    onEnter: () => pageTheme.set("light"),
+    setupTimeline: (tl) => {
+      const cards = cardRefs.current.filter(Boolean);
+      if (cards.length) {
+        tl.fromTo(cards, { opacity: 0, y: 40 }, { opacity: 1, y: 0, stagger: 0.08, ease: "none" }, 0);
+      }
+    },
   });
 
-  useEffect(() => {
-    const el = rootRef.current;
-    if (!el) return;
-    gsap.registerPlugin(ScrollTrigger);
-    const trigger = ScrollTrigger.create({
-      trigger: el,
-      start: "top 50%",
-      end: "bottom 50%",
-      onEnter: () => pageTheme.set("light"),
-      onEnterBack: () => pageTheme.set("light"),
-    });
-    return () => {
-      trigger.kill();
-    };
-  }, []);
-
   return (
-    <section
-      ref={rootRef}
-      className="BlogPreview overflow-hidden isolate w-full py-12 md:py-16 bg-white"
-    >
-      <div className="grid-layout-mobile md:grid-layout-desktop">
-        <div className="col-span-8 md:col-span-12">
-          <h2 className="header2 text-scale-gray-10">{BLOG_HEADING.lead}</h2>
-          <p className="header3-regular mt-2 text-scale-gray-30 md:mt-3">
-            {BLOG_HEADING.sub}
-          </p>
-        </div>
-      </div>
+    <section ref={sectionRef} className="BlogPreview overflow-hidden isolate w-full py-12 md:py-16 bg-white">
+      {/* centred two-line heading, both lines the same size */}
+      <h2 className="header3-regular text-center text-scale-gray-10">
+        <span className="block">{BLOG_HEADING.lead}</span>
+        <span className="block">{BLOG_HEADING.sub}</span>
+      </h2>
 
-      <div className="mt-10 gap-y-10 grid-layout-mobile md:mt-14 md:grid-layout-desktop md:gap-y-12">
-        {BLOG_FEATURED.map((post, index) => (
-          <FeaturedCard
-            key={post.href}
-            post={post}
-            setRef={registerCard(index)}
-          />
-        ))}
-      </div>
-
-      <div className="mt-10 gap-y-10 grid-layout-mobile md:mt-16 md:grid-layout-desktop md:gap-y-12">
-        {BLOG_POSTS.map((post, index) => (
-          <PostCard
-            key={post.href}
-            post={post}
-            setRef={registerCard(BLOG_FEATURED.length + index)}
-          />
+      <div className="mx-auto mt-10 grid max-w-[1200px] grid-cols-8 gap-1.5 grid-padding md:mt-14 md:grid-cols-12">
+        {BLOG_MOSAIC.map((card, index) => (
+          <Card key={card.href} card={card} setRef={(el) => { cardRefs.current[index] = el; }} />
         ))}
       </div>
     </section>

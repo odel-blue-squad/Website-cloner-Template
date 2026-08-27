@@ -129,6 +129,23 @@ export function SiteHeader() {
     wasOpen.current = menuOpen;
   }, [menuOpen]);
 
+  // Hide on scroll-down, reveal on scroll-up (visible in the reference capture:
+  // the header is absent in every scrolled frame).
+  const [hidden, setHidden] = useState(false);
+  useEffect(() => {
+    let lastY = window.scrollY;
+    const onScroll = () => {
+      const y = window.scrollY;
+      const delta = y - lastY;
+      lastY = y;
+      if (y < 80) setHidden(false);
+      else if (delta > 4) setHidden(true);
+      else if (delta < -4) setHidden(false);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   const onNavBlur = useCallback((event: FocusEvent<HTMLDivElement>) => {
     const next = event.relatedTarget as Node | null;
     if (next && event.currentTarget.contains(next)) return;
@@ -137,7 +154,12 @@ export function SiteHeader() {
 
   return (
     <>
-      <header className="fixed left-0 right-0 z-50 transition-colors duration-300 top-[var(--announcement-offset,0px)]">
+      <header
+        className={cn(
+          "fixed left-0 right-0 z-50 transition-[color,background-color,translate] duration-300 top-[var(--announcement-offset,0px)]",
+          hidden && !menuOpen && "-translate-y-[calc(100%+var(--announcement-offset,0px))]",
+        )}
+      >
         <div
           style={THEME_VARS[theme]}
           className={cn(
@@ -162,7 +184,7 @@ export function SiteHeader() {
               <nav
                 ref={desktopNavRef}
                 aria-label="Main"
-                className="hidden md:col-span-8 md:flex md:items-center md:justify-center md:gap-1"
+                className="hidden md:col-span-8 md:flex md:items-center md:justify-start md:gap-1 md:pl-2"
               >
                 {NAV_ITEMS.map((item) => {
                   const isOpen = openNav === item.label;
@@ -233,14 +255,14 @@ export function SiteHeader() {
               <div className="hidden md:col-span-3 md:flex md:items-center md:justify-end md:gap-5">
                 <Link
                   href={LOGIN_HREF}
-                  className="text-[14px] leading-5 font-medium whitespace-nowrap opacity-80 transition-opacity duration-200 hover:opacity-100 focus:outline-1 focus:outline-scale-skyblue"
+                  className="inline-flex items-center rounded-full border border-current/25 px-4 py-2 text-[13px] leading-5 font-medium whitespace-nowrap opacity-90 transition-opacity duration-200 hover:opacity-100 focus:outline-1 focus:outline-scale-skyblue"
                 >
                   Log In
                 </Link>
                 <Link
                   href={DEMO_HREF}
                   className={cn(
-                    "inline-flex items-center rounded-full px-5 py-2.5 text-[14px] leading-5 font-medium whitespace-nowrap transition-colors duration-200 delay-20 focus:outline-1 focus:outline-scale-skyblue",
+                    "inline-flex items-center rounded-full px-4 py-2 text-[13px] leading-5 font-medium whitespace-nowrap transition-colors duration-200 delay-20 focus:outline-1 focus:outline-scale-skyblue",
                     // The pill inverts with the section theme; a white pill on
                     // the light (white/80) nav background would be invisible.
                     theme === "dark"

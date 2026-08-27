@@ -16,8 +16,12 @@ export interface CustomerCard {
 
 export interface IndustryWord {
   word: string;
-  image?: string;
-  alt?: string;
+  /** Inline colour from the live markup. */
+  color: string;
+  /** Slide-in direction from the live markup's data-direction. */
+  direction: "left" | "right";
+  image: string;
+  alt: string;
 }
 
 export interface BenchmarkCard {

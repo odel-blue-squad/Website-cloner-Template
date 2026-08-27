@@ -10,12 +10,12 @@ import {
 } from "@/components/sites/scale-com-31338bde/shared/useTimelineScroll";
 import { pageTheme } from "@/components/sites/scale-com-31338bde/shared/pageTheme";
 import {
-  ArrowRightIcon,
   INDUSTRY_RING_PATH_DESKTOP,
   INDUSTRY_RING_PATH_MOBILE,
 } from "@/components/sites/scale-com-31338bde/shared/icons";
 import {
   INDUSTRY_CTA,
+  INDUSTRY_STATIC,
   INDUSTRY_WORDS,
 } from "@/components/sites/scale-com-31338bde/root-8a5edab2/content";
 
@@ -54,12 +54,11 @@ interface RingItem {
   alt: string;
 }
 
-/** The first two entries ("Artificial Intelligence", "Real") carry no photo. */
-const RING_ITEMS: RingItem[] = INDUSTRY_WORDS.flatMap((entry) =>
-  entry.image
-    ? [{ word: entry.word, image: entry.image, alt: entry.alt ?? entry.word }]
-    : [],
-);
+const RING_ITEMS: RingItem[] = INDUSTRY_WORDS.map((entry) => ({
+  word: entry.word,
+  image: entry.image,
+  alt: entry.alt,
+}));
 
 interface Point {
   x: number;
@@ -116,6 +115,23 @@ export function IndustryRing() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
+  /** Measured widths of each cycling word, so the line re-centres per word. */
+  const [wordWidths, setWordWidths] = useState<number[]>([]);
+  const rulerRef = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    const measure = () => {
+      const ruler = rulerRef.current;
+      if (!ruler) return;
+      setWordWidths(
+        Array.from(ruler.children, (el) => (el as HTMLElement).getBoundingClientRect().width),
+      );
+    };
+    measure();
+    document.fonts?.ready.then(measure).catch(() => undefined);
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [isMobile]);
 
   /* -- environment queries: breakpoint + motion preference -- */
   useEffect(() => {
@@ -250,33 +266,49 @@ export function IndustryRing() {
             <section className="relative flex origin-top items-center justify-center min-h-[90vh] md:min-h-screen z-2 overflow-clip bg-scale-gray-90">
               {/* centre text */}
               <div className="relative z-50 flex flex-col items-center w-full max-w-5xl gap-6 md:gap-8 mx-auto pointer-events-none">
-                <h2 className="header1 grid grid-padding text-center text-scale-gray-10">
-                  {INDUSTRY_WORDS.map((entry, i) => (
+                {/* Static headline; only the word after "Real" cycles.
+                    Sizes verbatim from the live markup's dynamic-header. */}
+                <h2 className="text-center text-black max-md:text-[28px] max-md:leading-[30px] md:text-[4rem] md:leading-[1.05]">
+                  <span className="block">{INDUSTRY_STATIC.line1}</span>
+                  <span className="block whitespace-nowrap">
+                    {INDUSTRY_STATIC.line2}{" "}
                     <span
-                      key={entry.word}
-                      aria-hidden={i !== displayedIndex}
-                      className={cn(
-                        "col-start-1 row-start-1 block will-change-[opacity,transform]",
-                        "transition-[opacity,transform] duration-[350ms] ease-[cubic-bezier(0.25,0.46,0.45,0.94)]",
-                        i === displayedIndex && "translate-y-0 opacity-100",
-                        i < displayedIndex && "-translate-y-3 opacity-0",
-                        i > displayedIndex && "translate-y-3 opacity-0",
-                      )}
+                      className="relative inline-block align-baseline transition-[width] duration-[350ms] ease-out"
+                      style={{ width: wordWidths[displayedIndex] ?? "auto" }}
                     >
-                      {entry.word}
+                      {/* invisible ruler: one span per word, measured for width */}
+                      <span ref={rulerRef} aria-hidden="true" className="pointer-events-none absolute top-0 left-0 invisible">
+                        {INDUSTRY_WORDS.map((entry) => (
+                          <span key={entry.word} className="absolute top-0 left-0 whitespace-nowrap">{entry.word}</span>
+                        ))}
+                      </span>
+                      {INDUSTRY_WORDS.map((entry, i) => (
+                        <span
+                          key={entry.word}
+                          aria-hidden={i !== displayedIndex}
+                          style={{ color: entry.color }}
+                          className={cn(
+                            "absolute top-0 left-0 whitespace-nowrap will-change-[opacity,transform]",
+                            "transition-[opacity,translate] duration-[350ms] ease-[cubic-bezier(0.25,0.46,0.45,0.94)]",
+                            i === displayedIndex && "translate-x-0 opacity-100",
+                            i !== displayedIndex &&
+                              (entry.direction === "left" ? "-translate-x-6 opacity-0" : "translate-x-6 opacity-0"),
+                          )}
+                        >
+                          {entry.word}
+                        </span>
+                      ))}
+                      {/* in-flow copy of the active word keeps line height honest */}
+                      <span className="invisible whitespace-nowrap">{INDUSTRY_WORDS[displayedIndex].word}</span>
                     </span>
-                  ))}
+                  </span>
                 </h2>
 
                 <a
                   href={INDUSTRY_CTA.href}
-                  className="group pointer-events-auto inline-flex items-center gap-2 rounded-full bg-black px-6 py-3 body3 text-white transition-colors duration-300 hover:bg-scale-gray-20"
+                  className="pointer-events-auto inline-flex h-7 items-center rounded-full bg-white px-3.5 text-[11px] font-medium text-black shadow-[0_1px_4px_rgba(0,0,0,0.12)] transition-colors duration-300 hover:bg-scale-gray-95"
                 >
                   {INDUSTRY_CTA.label}
-                  <ArrowRightIcon
-                    aria-hidden="true"
-                    className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1"
-                  />
                 </a>
               </div>
 
@@ -288,14 +320,14 @@ export function IndustryRing() {
                     ref={(node) => {
                       itemRefs.current[i] = node;
                     }}
-                    className="absolute top-1/2 left-1/2 h-[90px] w-[72px] overflow-hidden rounded-lg bg-scale-gray-80 shadow-[0_10px_30px_rgba(0,0,0,0.15)] select-none md:h-[140px] md:w-[112px]"
+                    className="absolute top-1/2 left-1/2 h-[64px] w-[52px] overflow-hidden rounded-lg bg-scale-gray-80 shadow-[0_8px_24px_rgba(0,0,0,0.12)] select-none md:h-[95px] md:w-[76px]"
                   >
                     <Image
                       src={item.image}
                       alt={item.alt}
                       fill
                       draggable={false}
-                      sizes="(max-width: 767px) 72px, 112px"
+                      sizes="(max-width: 767px) 52px, 76px"
                       className="object-cover"
                     />
                   </div>

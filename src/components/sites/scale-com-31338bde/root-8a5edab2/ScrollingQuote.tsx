@@ -121,7 +121,7 @@ export function ScrollingQuote() {
               className={cn(
                 "relative w-full rounded-lg bg-black",
                 "max-md:min-h-0 max-md:shrink max-md:grow max-md:basis-0",
-                "md:h-[60%] md:w-[362px] md:min-h-0 md:flex-none md:shrink-0 md:rounded-3xl",
+                "md:h-[60%] md:w-[362px] md:min-h-0 md:flex-none md:shrink-0 md:self-end md:rounded-3xl",
               )}
             >
               <div className="ResponsiveVideo h-full overflow-clip rounded-lg md:rounded-3xl">
