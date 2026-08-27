@@ -45,7 +45,7 @@ const LOGOS = [
   ['logo-bp.png',              q('97b56ffc0a6705de3b3bf5fefb89355801170fd8-2095x1740.png', 192)],
   ['logo-cengage.png',         q('bb4a5afa6c49ba2fcf20f4b0bcd4833056fa8dae-728x800.png', 192)],
   ['logo-shore-capital.png',   q('29998d0f22b7a6d67d8143cb863cee78d1ae26b8-728x800.png', 192)],
-  ['hero-logo-1.png',          q('8ee4b8bc14e6ce4d1d8190ffb61f326e4657153f-59x64.svg', 272)],
+  ['hero-logo-1.png',          'https://cdn.sanity.io/images/50zba0eo/production/8ee4b8bc14e6ce4d1d8190ffb61f326e4657153f-59x64.svg?w=272&fm=png'],
   ['hero-logo-2.png',          q('e417ebdb6525c9e23dd8f1ae5b10c26bfa78fc40-728x800.png', 272)],
   ['hero-logo-3.png',          q('8e61456fc0334f161081b09832bc8f73f76cfd20-728x800.png', 272)],
   ['hero-logo-4.png',          q('c47da44df5fdfa654b9c02be759434e29b8c5051-728x800.png', 272)],

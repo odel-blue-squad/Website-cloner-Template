@@ -115,7 +115,11 @@ void main() {
 
   // logo
   vec2 logoUv = vUv;
-  float animatedScale = cubicOut(clamp(uProgress * 2.5, 0.0, 1.0));
+  // Guarded divisor: cubicOut(0) is exactly 0, and the original 1.0/animatedScale
+  // then yields Inf. At vUv 0.5 the logoUv component is 0, so 0 * Inf = NaN, which
+  // propagates through aastep/mix and paints an opaque white blob. Clamping the
+  // low end leaves every other value bit-identical to scale.com's shader.
+  float animatedScale = max(cubicOut(clamp(uProgress * 2.5, 0.0, 1.0)), 1e-4);
   logoUv -= 0.5;
   logoUv.x *= containerAspect;
   logoUv *= 4.0;

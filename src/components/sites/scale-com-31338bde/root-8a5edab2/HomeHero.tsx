@@ -52,7 +52,10 @@ export function HomeHero() {
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(50, 1, 0.01, 100);
-    camera.position.z = 1;
+    // Distance chosen so the panel is exactly full-bleed at the timeline's
+    // opening scale of 1.75: panelHeight = 0.4 * 1.75 = 0.7 world units, and
+    // 0.7 / (2 * tan(50deg / 2)) = 0.75.
+    camera.position.z = 0.75;
 
     let hero: HeroScene;
     try {

@@ -3,6 +3,7 @@ import { AnnouncementBar } from "@/components/sites/scale-com-31338bde/root-8a5e
 import { SiteHeader } from "@/components/sites/scale-com-31338bde/root-8a5edab2/SiteHeader";
 import { HomeHero } from "@/components/sites/scale-com-31338bde/root-8a5edab2/HomeHero";
 import { ScrollingQuote } from "@/components/sites/scale-com-31338bde/root-8a5edab2/ScrollingQuote";
+import { IndustryRing } from "@/components/sites/scale-com-31338bde/root-8a5edab2/IndustryRing";
 import { CustomerMarquee } from "@/components/sites/scale-com-31338bde/root-8a5edab2/CustomerMarquee";
 import { BenchmarkCards } from "@/components/sites/scale-com-31338bde/root-8a5edab2/BenchmarkCards";
 import { BlogPreview } from "@/components/sites/scale-com-31338bde/root-8a5edab2/BlogPreview";
@@ -19,6 +20,7 @@ export default function Home() {
           <div className="CMSSliceRenderer rootPageRenderer relative">
             <HomeHero />
             <ScrollingQuote />
+            <IndustryRing />
             <CustomerMarquee />
             <BenchmarkCards />
             <BlogPreview />
