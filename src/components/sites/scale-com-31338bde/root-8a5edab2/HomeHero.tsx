@@ -77,7 +77,7 @@ export function HomeHero() {
       const h = host.clientHeight || window.innerHeight;
       const dpr = Math.min(window.devicePixelRatio, 2);
       renderer.setPixelRatio(dpr);
-      renderer.setSize(w, h, false);
+      renderer.setSize(w, h); // updateStyle must stay on, or the canvas paints at DPR scale
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
       hero.uniforms.uResolution.value.set(w, h);

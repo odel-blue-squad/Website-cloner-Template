@@ -12,6 +12,17 @@ uniform vec2 uResolution;
 uniform float uDPR;
 `;
 
+/**
+ * Fragment programs additionally need an explicit colour output. These shaders
+ * are compiled as GLSL3 (they use texelFetch/textureSize), and this three.js
+ * version does not alias gl_FragColor for GLSL3 ShaderMaterials, so we declare
+ * it here — that keeps the ported shader bodies byte-for-byte verbatim.
+ */
+const FRAG_PRELUDE = PRELUDE + /* glsl */ `
+layout(location = 0) out highp vec4 pc_fragColor;
+#define gl_FragColor pc_fragColor
+`;
+
 const EASINGS = /* glsl */ `
 float cubicInOut(float t) {
     return t < 0.5
@@ -52,7 +63,7 @@ void main() {
 }
 `;
 
-export const PANEL_FRAG = PRELUDE + EASINGS + /* glsl */ `
+export const PANEL_FRAG = FRAG_PRELUDE + EASINGS + /* glsl */ `
 uniform sampler2D tMap;
 uniform sampler2D tLogo;
 uniform float uProgress;
@@ -156,7 +167,7 @@ void main() {
 }
 `;
 
-export const CARD_FRAG = PRELUDE + /* glsl */ `
+export const CARD_FRAG = FRAG_PRELUDE + /* glsl */ `
 uniform float uProgress;
 
 void main() {
@@ -195,7 +206,7 @@ void main() {
 }
 `;
 
-export const CURVE_FRAG = PRELUDE + EASINGS + /* glsl */ `
+export const CURVE_FRAG = FRAG_PRELUDE + EASINGS + /* glsl */ `
 uniform float uProgress;
 
 varying float vCurveu;
@@ -285,7 +296,7 @@ void main() {
 }
 `;
 
-export const TRAVELLER_FRAG = PRELUDE + /* glsl */ `
+export const TRAVELLER_FRAG = FRAG_PRELUDE + /* glsl */ `
 varying float vMask;
 varying float vProgress;
 
@@ -341,7 +352,7 @@ void main() {
 }
 `;
 
-export const PARTICLE_FRAG = PRELUDE + /* glsl */ `
+export const PARTICLE_FRAG = FRAG_PRELUDE + /* glsl */ `
 varying float vRandom;
 varying float vId;
 
@@ -405,7 +416,7 @@ void main() {
 }
 `;
 
-export const CONNECTOR_FRAG = PRELUDE + /* glsl */ `
+export const CONNECTOR_FRAG = FRAG_PRELUDE + /* glsl */ `
 uniform float uProgress;
 
 varying vec3 vColor;

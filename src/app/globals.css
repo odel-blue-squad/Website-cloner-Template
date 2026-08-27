@@ -1,6 +1,11 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* `oml:` on scale.com is a landscape-phone variant, verified against their
+   compiled CSS — NOT a width breakpoint. Rules like `oml:pb-2` shrink padding
+   on a phone held sideways. */
+@custom-variant oml (@media (orientation: landscape) and (max-height: 500px));
+
 /* ============================================================
    Scale AI design system — extracted from scale.com compiled CSS
    Palette, type scale, grid and breakpoints are verbatim values.
@@ -21,6 +26,7 @@
   --color-scale-lightmauve: #d1aad7;
   --color-scale-periwinkle: #7b8fdd;
   --color-scale-skyblue: #86bff2;
+  --color-scale-evergreen: #193a29;
 
   /* Gradient stops */
   --color-scale-gradient-1: #9068c2;
@@ -30,8 +36,8 @@
   --font-sans: var(--font-aeonik), -apple-system, Arial, sans-serif;
   --font-mono: var(--font-scale-mono), ui-monospace, monospace;
 
-  /* scale.com uses a 1450px "oml" breakpoint on top of the tailwind defaults */
-  --breakpoint-oml: 1450px;
+  /* scale.com adds a 1450px stop on top of the tailwind defaults */
+  --breakpoint-3xl: 1450px;
 }
 
 :root {
