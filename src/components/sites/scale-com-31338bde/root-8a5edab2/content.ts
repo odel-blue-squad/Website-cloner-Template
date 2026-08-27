@@ -91,8 +91,9 @@ export const BENCHMARK_CARDS: BenchmarkCard[] = [
 export const BLOG_HEADING = { lead: "From the Lab to the real world.", sub: "The latest from Scale." };
 
 export const BLOG_FEATURED: BlogPost[] = [
-  { title: "Introducing Scale Labs", image: `${IMG}/blog-scale-labs.png`, href: "/blog/scale-labs", featured: true },
-  { title: "Mayo Clinic + Scale: Reliable AI for Better Healthcare", image: `${IMG}/blog-morgan-stanley.png`, href: "/blog/mayo-clinic-scale", featured: true },
+  // Text-only on the live site: a flat #F2F2F2 panel, no media.
+  { title: "Introducing Scale Labs", href: "/blog/scale-labs", featured: true },
+  { title: "Mayo Clinic + Scale: Reliable AI for Better Healthcare", image: `${IMG}/blog-mayo-clinic.png`, href: "/blog/mayo-clinic-scale", featured: true },
 ];
 
 export const BLOG_POSTS: BlogPost[] = [

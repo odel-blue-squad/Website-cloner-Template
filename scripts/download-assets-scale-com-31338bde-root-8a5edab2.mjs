@@ -51,7 +51,7 @@ const LOGOS = [
   ['hero-logo-4.png',          q('c47da44df5fdfa654b9c02be759434e29b8c5051-728x800.png', 272)],
 ];
 const BLOG = [
-  ['blog-scale-labs.png',     q('7dba1e09ebf0ec7d950e98a9d0acd105d5e321eb-1200x675.png', 1600)],
+  ['blog-mayo-clinic.png',   q('7dba1e09ebf0ec7d950e98a9d0acd105d5e321eb-1200x675.png', 1600)],
   ['blog-morgan-stanley.png', q('33a48d23f2ed66d00a6f49019e1cb1c26601fb82-4096x3072.png', 1200)],
   ['blog-ai-policy.jpg',      q('268567baa8c9467df5d292ad90cbe3e56c6c62d6-8660x5773.jpg', 1200)],
   ['blog-bae-systems.jpg',    q('4cee6be6909bbc63ee839b6b7f50661894b2aaee-6222x4148.jpg', 1200)],

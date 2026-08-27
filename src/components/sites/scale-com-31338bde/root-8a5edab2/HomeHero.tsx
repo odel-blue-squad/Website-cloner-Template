@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import Image from "next/image";
 import * as THREE from "three";
 import { gsap } from "gsap";
@@ -26,7 +26,7 @@ export function HomeHero() {
   const rootRef = useRef<HTMLDivElement>(null);
   const canvasHostRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [ready, setReady] = useState(false);
+  const posterRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
     const host = canvasHostRef.current;
@@ -65,7 +65,9 @@ export function HomeHero() {
       return;
     }
     scene.add(hero.group);
-    setReady(true);
+    // Fade the poster out directly rather than through React state: this is an
+    // external-system update, and setState here would cascade a re-render.
+    if (posterRef.current) posterRef.current.style.opacity = "0";
 
     /* ---- exact timeline from scale.com's bundle ---- */
     const timeline = gsap.timeline({ paused: true });
@@ -114,10 +116,6 @@ export function HomeHero() {
       onEnter: () => pageTheme.set("dark"),
       onEnterBack: () => pageTheme.set("dark"),
     });
-
-    if (process.env.NODE_ENV === "development") {
-      (window as unknown as { __hero?: unknown }).__hero = { hero, timeline, camera, trigger };
-    }
 
     const clock = new THREE.Clock();
     const tick = () => {
@@ -184,7 +182,8 @@ export function HomeHero() {
 
         {/* Poster shown until the GL scene reports ready (and if WebGL is absent). */}
         <div
-          className={`absolute inset-0 z-0 transition-opacity duration-700 ${ready ? "opacity-0" : "opacity-100"}`}
+          ref={posterRef}
+          className="absolute inset-0 z-0 opacity-100 transition-opacity duration-700"
           aria-hidden="true"
         >
           <Image

@@ -27,6 +27,18 @@ export function SmoothScrollProvider({ children }: { children: React.ReactNode }
     gsap.ticker.add(raf);
     gsap.ticker.lagSmoothing(0);
 
+    // QA affordance (development only): ?scrollTo=<px> jumps straight to a scroll
+    // depth so scrolled states can be captured without driving the wheel.
+    if (process.env.NODE_ENV === "development") {
+      const target = Number(new URLSearchParams(window.location.search).get("scrollTo"));
+      if (Number.isFinite(target) && target > 0) {
+        window.setTimeout(() => {
+          lenis.scrollTo(target, { immediate: true });
+          ScrollTrigger.refresh();
+        }, 600);
+      }
+    }
+
     // Recalculate once fonts/images settle so pin distances are correct.
     const refresh = () => ScrollTrigger.refresh();
     window.addEventListener("load", refresh);

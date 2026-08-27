@@ -30,7 +30,8 @@ export interface BenchmarkCard {
 export interface BlogPost {
   title: string;
   category?: string;
-  image: string;
+  /** Absent for text-only cards (scale.com renders those on a flat grey panel). */
+  image?: string;
   href: string;
   alt?: string;
   featured?: boolean;

@@ -33,13 +33,15 @@ function FeaturedCard({ post, setRef }: BlogCardProps) {
       className="group col-span-8 block md:col-span-6"
     >
       <div className="relative aspect-[16/9] w-full overflow-hidden rounded-[16px] bg-scale-gray-95">
-        <Image
-          src={post.image}
-          alt={post.alt ?? ""}
-          fill
-          sizes={FEATURED_SIZES}
-          className="object-cover transition-transform duration-500 ease-out will-change-transform group-hover:scale-[1.04]"
-        />
+        {post.image ? (
+          <Image
+            src={post.image}
+            alt={post.alt ?? ""}
+            fill
+            sizes={FEATURED_SIZES}
+            className="object-cover transition-transform duration-500 ease-out will-change-transform group-hover:scale-[1.04]"
+          />
+        ) : null}
       </div>
       <h3 className="header5-regular mt-4 text-scale-gray-10 transition-colors duration-300 ease-out group-hover:text-scale-gray-30 md:mt-6">
         {post.title}
@@ -56,13 +58,15 @@ function PostCard({ post, setRef }: BlogCardProps) {
       className="group col-span-8 block md:col-span-4"
     >
       <div className="relative aspect-[16/9] w-full overflow-hidden rounded-[16px] bg-scale-gray-95">
-        <Image
-          src={post.image}
-          alt={post.alt ?? ""}
-          fill
-          sizes={POST_SIZES}
-          className="object-cover transition-transform duration-500 ease-out will-change-transform group-hover:scale-[1.04]"
-        />
+        {post.image ? (
+          <Image
+            src={post.image}
+            alt={post.alt ?? ""}
+            fill
+            sizes={POST_SIZES}
+            className="object-cover transition-transform duration-500 ease-out will-change-transform group-hover:scale-[1.04]"
+          />
+        ) : null}
       </div>
       {post.category ? (
         <p className="body3 mt-4 uppercase tracking-wider text-scale-gray-60">
