@@ -87,6 +87,12 @@ export function HomeHero() {
       hero.uniforms.uDPR.value = dpr;
     };
     resize();
+    // A window "resize" listener alone is not enough: the host can change size
+    // without the window doing so (pane/panel layouts, dvh settling after the
+    // URL bar collapses). Observe the element itself and keep the listener as a
+    // backstop for devicePixelRatio changes on monitor switches.
+    const observer = new ResizeObserver(resize);
+    observer.observe(host);
     window.addEventListener("resize", resize);
 
     /* ---- mouse parallax (scale.com uses strength 0.25) ---- */
@@ -109,6 +115,10 @@ export function HomeHero() {
       onEnterBack: () => pageTheme.set("dark"),
     });
 
+    if (process.env.NODE_ENV === "development") {
+      (window as unknown as { __hero?: unknown }).__hero = { hero, timeline, camera, trigger };
+    }
+
     const clock = new THREE.Clock();
     const tick = () => {
       const delta = clock.getDelta();
@@ -127,6 +137,7 @@ export function HomeHero() {
 
     return () => {
       gsap.ticker.remove(tick);
+      observer.disconnect();
       window.removeEventListener("resize", resize);
       window.removeEventListener("pointermove", onPointerMove);
       trigger.kill();

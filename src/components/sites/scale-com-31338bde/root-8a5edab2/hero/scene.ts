@@ -205,7 +205,15 @@ export function buildHeroScene(video: HTMLVideoElement, logoUrl: string): HeroSc
   disposables.push(panelGeo);
   group.add(new THREE.Mesh(panelGeo, material(
     PANEL_VERT, PANEL_FRAG,
-    { tMap: { value: videoTexture }, tLogo: { value: logoTexture }, uAlpha: alpha },
+    {
+      tMap: { value: videoTexture },
+      tLogo: { value: logoTexture },
+      uAlpha: alpha,
+      // Populated region of Packed.mp4, measured from the decoded frame:
+      // the clip fills the bottom-left 80% x 80% of the 1920x1080 canvas.
+      uMapScale: { value: new THREE.Vector2(0.8, 0.8) },
+      uMapOffset: { value: new THREE.Vector2(0.0, 0.0) },
+    },
     { depthTest: false, blending: THREE.NormalBlending },
   )));
 

@@ -69,6 +69,16 @@ uniform sampler2D tLogo;
 uniform float uProgress;
 uniform float uAlpha;
 
+/**
+ * Packed.mp4 is a packed atlas, not a plain clip: the 16:9 footage occupies the
+ * bottom-left 1536x864 of the 1920x1080 frame (exactly 0.8 x 0.8) and the rest
+ * is padding, which is why the file is named "Packed". Sampling the raw frame
+ * paints those padding bands as black bars. scale.com's own image programs carry
+ * uScale/uOffset uniforms for exactly this; these mirror them.
+ */
+uniform vec2 uMapScale;
+uniform vec2 uMapOffset;
+
 varying vec2 vUv;
 
 float sdRoundedBox( vec2 p, vec2 b, vec4 _r ) {
@@ -90,10 +100,13 @@ void main() {
   // scale image to fit depending on aspect ratio
   uv -= 0.5;
   ivec2 texSize = textureSize(tMap, 0);
-  float imageAspect = float(texSize.x) / float(texSize.y);
+  float imageAspect = (float(texSize.x) * uMapScale.x) / (float(texSize.y) * uMapScale.y);
   vec2 scale = vec2(imageAspect * 0.5, 1.0);
   uv *= scale;
   uv += 0.5;
+
+  // Remap into the populated region of the packed atlas.
+  uv = uv * uMapScale + uMapOffset;
 
   vec3 color = texture2D(tMap, uv).rgb;
   color = color * 2.0 - 1.0;
