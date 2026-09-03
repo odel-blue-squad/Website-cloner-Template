@@ -1,0 +1,212 @@
+# Planted into every org repo by sweep-classify.yml.
+# Labels the issue locally, then writes registry/<repo>.json into odel-blue-squad/.github.
+# Needs org secret ORG_SWEEPER_TOKEN (never commit the token).
+
+name: Classify product issue
+
+on:
+  issues:
+    types: [opened, edited, reopened]
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  classify:
+    if: >-
+      contains(join(github.event.issue.labels.*.name, ','), 'product-classification')
+      || startsWith(github.event.issue.title, '[تصنيف]')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Classify, label, write hub registry
+        uses: actions/github-script@v7
+        env:
+          ORG_SWEEPER_TOKEN: ${{ secrets.ORG_SWEEPER_TOKEN }}
+          HUB_OWNER: odel-blue-squad
+          HUB_REPO: .github
+        with:
+          script: |
+            const yes = (v) => v === 'نعم';
+
+            const FIELDS = [
+              { id: 'backend', label: 'هل الريبو فيها باكند؟ (مثل springboot, fastapi)' },
+              { id: 'db', label: 'هل الريبو فيها قاعدة بيانات على السيرفر؟' },
+              { id: 'ai', label: 'هل الريبو فيها AI؟' },
+              { id: 'jira', label: 'هل الريبو لها jira؟' },
+              { id: 'cicd', label: 'هل الريبو لها coolify / custom ci/cd؟' },
+              { id: 'meeting', label: 'هل الريبو مسويها عشان ميتنق؟' },
+              { id: 'client', label: 'هل الريبو بتستخدم من قبل العميل؟' },
+              { id: 'scope', label: 'هل الريبو داخلية ام خارجية؟ (داخلية=أودل، خارجية=عميل)' },
+              { id: 'sensitive', label: 'هل الريبو فيها اي بيانات حساسة؟' },
+              { id: 'b2c', label: 'هل الريبو B2C؟' },
+              { id: 'payments', label: 'هل الريبو فيها مدفوعات؟' },
+              { id: 'gov', label: 'هل الريبو فيها اي تكامل مع اي جهة حكومية؟' },
+              { id: 'client4m', label: 'هل الريبو بيستخدمها العميل لأكثر من ٤ شهور؟' },
+            ];
+
+            function parseAnswers(body) {
+              const answers = {};
+              const text = body || '';
+              for (const { id, label } of FIELDS) {
+                const re = new RegExp(
+                  '###\\s*' + label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*\\n+([^\\n#]+)',
+                  'm'
+                );
+                const m = text.match(re);
+                answers[id] = m ? m[1].trim() : null;
+              }
+              return answers;
+            }
+
+            // Released = client using it > 4 months
+            // MVP     = client uses it, or has CI/CD plus backend/db
+            // POC     = everything else
+            function tierOf(a) {
+              if (yes(a.client4m)) return 'released';
+              if (yes(a.client) || (yes(a.cicd) && (yes(a.backend) || yes(a.db)))) return 'mvp';
+              return 'poc';
+            }
+
+            const TIER_LABELS = {
+              poc: { name: 'tier:poc', color: 'BFD4F2', description: 'Proof of concept' },
+              mvp: { name: 'tier:mvp', color: 'F9D0C4', description: 'Minimum viable product' },
+              released: { name: 'tier:released', color: 'C2E0C6', description: 'Released / production' },
+            };
+
+            async function ensureLabel(owner, repo, label) {
+              try {
+                await github.rest.issues.createLabel({
+                  owner,
+                  repo,
+                  name: label.name,
+                  color: label.color,
+                  description: label.description,
+                });
+              } catch (e) {
+                if (e.status !== 422) throw e;
+              }
+            }
+
+            // Hub write via fetch — no getOctokit / require('@actions/github') on v7
+            async function putHubFile(token, path, content, message) {
+              const owner = process.env.HUB_OWNER;
+              const repo = process.env.HUB_REPO;
+              const api = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+              const headers = {
+                Authorization: `Bearer ${token}`,
+                Accept: 'application/vnd.github+json',
+                'X-GitHub-Api-Version': '2022-11-28',
+                'Content-Type': 'application/json',
+              };
+
+              let sha;
+              const getRes = await fetch(api, { headers });
+              if (getRes.status === 200) {
+                const body = await getRes.json();
+                sha = body.sha;
+              } else if (getRes.status !== 404) {
+                throw new Error(`GET ${path} failed: ${getRes.status} ${await getRes.text()}`);
+              }
+
+              const putRes = await fetch(api, {
+                method: 'PUT',
+                headers,
+                body: JSON.stringify({
+                  message,
+                  content: Buffer.from(content, 'utf8').toString('base64'),
+                  sha,
+                }),
+              });
+              if (!putRes.ok) {
+                throw new Error(`PUT ${path} failed: ${putRes.status} ${await putRes.text()}`);
+              }
+            }
+
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const issue_number = context.issue.number;
+            const issue = context.payload.issue;
+            const answers = parseAnswers(issue.body);
+            const tier = tierOf(answers);
+            const tierLabel = TIER_LABELS[tier];
+
+            core.info(`Parsed answers: ${JSON.stringify(answers)}`);
+            core.info(`Tier: ${tier}`);
+
+            for (const label of Object.values(TIER_LABELS)) {
+              await ensureLabel(owner, repo, label);
+            }
+            await ensureLabel(owner, repo, {
+              name: 'product-classification',
+              color: '5319E7',
+              description: 'Product classification form',
+            });
+
+            const current = (issue.labels || []).map((l) => l.name);
+            const remove = current.filter((n) => n.startsWith('tier:') && n !== tierLabel.name);
+            for (const name of remove) {
+              await github.rest.issues.removeLabel({ owner, repo, issue_number, name }).catch(() => {});
+            }
+            if (!current.includes(tierLabel.name)) {
+              await github.rest.issues.addLabels({
+                owner,
+                repo,
+                issue_number,
+                labels: [tierLabel.name],
+              });
+            }
+            if (!current.includes('product-classification')) {
+              await github.rest.issues.addLabels({
+                owner,
+                repo,
+                issue_number,
+                labels: ['product-classification'],
+              });
+            }
+
+            let registryNote = '_Hub registry skipped — set org secret ORG_SWEEPER_TOKEN (private repos on)._';
+            const token = process.env.ORG_SWEEPER_TOKEN;
+            if (token) {
+              const record = {
+                repo,
+                owner,
+                tier,
+                tier_label: tierLabel.name,
+                answers,
+                issue_number,
+                issue_url: issue.html_url,
+                classified_at: new Date().toISOString(),
+                workflow_run: `https://github.com/${owner}/${repo}/actions/runs/${context.runId}`,
+              };
+              const path = `registry/${repo}.json`;
+              await putHubFile(
+                token,
+                path,
+                JSON.stringify(record, null, 2) + '\n',
+                `registry: ${repo} → ${tierLabel.name}`
+              );
+              registryNote = `_Wrote \`${process.env.HUB_OWNER}/${process.env.HUB_REPO}/${path}\`._`;
+              core.info(`Wrote hub registry ${path}`);
+            } else {
+              core.warning('ORG_SWEEPER_TOKEN missing — local label ok, hub registry skipped.');
+            }
+
+            const summary = [
+              `### Classification result`,
+              ``,
+              `- **Repo:** \`${owner}/${repo}\``,
+              `- **Tier:** \`${tierLabel.name}\``,
+              `- **Scope:** ${answers.scope ?? '—'}`,
+              `- **Client:** ${answers.client ?? '—'} / >4m: ${answers.client4m ?? '—'}`,
+              `- **CI/CD:** ${answers.cicd ?? '—'} | **Backend:** ${answers.backend ?? '—'} | **DB:** ${answers.db ?? '—'}`,
+              ``,
+              registryNote,
+            ].join('\n');
+
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number,
+              body: summary,
+            });
