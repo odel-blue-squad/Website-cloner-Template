@@ -1,0 +1,83 @@
+name: تصنيف المنتج | Product Classification
+description: أجب عن الأسئلة لتحديد مستوى نضج المنتج (POC / MVP / Released).
+title: "[تصنيف] "
+labels: ["product-classification"]
+body:
+  - type: dropdown
+    id: backend
+    attributes:
+      label: هل الريبو فيها باكند؟ (مثل springboot, fastapi)
+      options: ["لا", "نعم"]
+    validations: { required: true }
+  - type: dropdown
+    id: db
+    attributes:
+      label: هل الريبو فيها قاعدة بيانات على السيرفر؟
+      options: ["لا", "نعم"]
+    validations: { required: true }
+  - type: dropdown
+    id: ai
+    attributes:
+      label: هل الريبو فيها AI؟
+      options: ["لا", "نعم"]
+    validations: { required: true }
+  - type: dropdown
+    id: jira
+    attributes:
+      label: هل الريبو لها jira؟
+      options: ["لا", "نعم"]
+    validations: { required: true }
+  - type: dropdown
+    id: cicd
+    attributes:
+      label: هل الريبو لها coolify / custom ci/cd؟
+      options: ["لا", "نعم"]
+    validations: { required: true }
+  - type: dropdown
+    id: meeting
+    attributes:
+      label: هل الريبو مسويها عشان ميتنق؟
+      options: ["لا", "نعم"]
+    validations: { required: true }
+  - type: dropdown
+    id: client
+    attributes:
+      label: هل الريبو بتستخدم من قبل العميل؟
+      options: ["لا", "نعم"]
+    validations: { required: true }
+  - type: dropdown
+    id: scope
+    attributes:
+      label: هل الريبو داخلية ام خارجية؟ (داخلية=أودل، خارجية=عميل)
+      options: ["داخلية", "خارجية"]
+    validations: { required: true }
+  - type: dropdown
+    id: sensitive
+    attributes:
+      label: هل الريبو فيها اي بيانات حساسة؟
+      options: ["لا", "نعم"]
+    validations: { required: true }
+  - type: dropdown
+    id: b2c
+    attributes:
+      label: هل الريبو B2C؟
+      options: ["لا", "نعم"]
+    validations: { required: true }
+  - type: dropdown
+    id: payments
+    attributes:
+      label: هل الريبو فيها مدفوعات؟
+      options: ["لا", "نعم"]
+    validations: { required: true }
+  - type: dropdown
+    id: gov
+    attributes:
+      label: هل الريبو فيها اي تكامل مع اي جهة حكومية؟
+      options: ["لا", "نعم"]
+    validations: { required: true }
+  - type: dropdown
+    id: client4m
+    attributes:
+      label: هل الريبو بيستخدمها العميل لأكثر من ٤ شهور؟
+      options: ["لا", "نعم"]
+    validations: { required: true }
